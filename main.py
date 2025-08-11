@@ -1,5 +1,7 @@
+import os
 import tkinter as tk
 from tkinter import filedialog
+from tkinter.messagebox import showinfo
 
 import win32com.client
 import pythoncom
@@ -65,12 +67,24 @@ class MainApplication(tk.Tk):
         self.pdf_check = CheckPdfWidget(self.main_frame)
         self.pdf_check.pack(fill='x')
 
-        self.btn_start = tk.Button(self.main_frame, text="Начать", command=self.on_btn_start_click)
+        self.btn_start = tk.Button(self.main_frame, text="Начать", command=self.change_files)
         self.btn_start.pack(fill='x', ipady=5)
 
 
-    def on_btn_start_click(self):
-        print(self.name_designer.get_value())
+    def change_files(self):
+        staff_names = [self.name_designer.get_value(),
+                       self.name_control.get_value(),
+                       self.name_technologist.get_value(),
+                       self.name_norm.get_value(),
+                       self.name_approve.get_value()]
+        if len(self.selected_files) > 0:
+            for item in self.selected_files:
+                self.kompas.change_document(item, staff_names)
+                if self.pdf_check.get_check() == 1:
+                    self.kompas.save_pdf(item)
+
+        showinfo('Сообщение', 'Выполнено')
+
 
 
     def select_files(self):
@@ -90,9 +104,7 @@ class MainApplication(tk.Tk):
         if files:
             self.selected_files = list(files)
 
-    def change_files(self):
-        for path in self.selected_files:
-            self.kompas.change_document(path)
+
 
 
 class InputStringWidget(tk.Frame):
@@ -107,7 +119,7 @@ class InputStringWidget(tk.Frame):
         self.date_input.pack(side=tk.LEFT, fill='x', expand=True, ipady=5)
 
     def get_value(self):
-        return self.surname_input.get()
+        return self.surname_input.get(), self.date_input.get()
 
 
 class CheckPdfWidget(tk.Frame):
@@ -123,7 +135,7 @@ class CheckPdfWidget(tk.Frame):
 
 
     def get_check(self):
-        return self.check_pdf_var
+        return self.check_pdf_var.get()
 
 
 class Kompas:
@@ -136,9 +148,45 @@ class Kompas:
         self.application = self.kompas_api7_module.IApplication(Dispatch("Kompas.Application.7")._oleobj_.QueryInterface(self.kompas_api7_module.IApplication.CLSID, pythoncom.IID_IDispatch))  # IApplication
         self.kompas_object = self.kompas_api5_module.KompasObject(Dispatch("Kompas.Application.5")._oleobj_.QueryInterface(self.kompas_api5_module.KompasObject.CLSID, pythoncom.IID_IDispatch))
         self.kompas6_constants = gencache.EnsureModule("{75C9F5D0-B5B8-4526-8681-9903C567D2ED}", 0, 1, 0).constants
+        self.application.HideMessage = 2
 
-    def change_document(self, path: str):
-        self.application.Documents.Open(path, False, False)
+    def change_document(self, path: str, staff_names: list):
+        kompas_document = self.application.Documents.Open(path, True, False) # IKompasDocument
+        kompas_layout = kompas_document.LayoutSheets.Item(0) # ILayoutSheet
+        kompas_stamp = kompas_layout.Stamp  # IStamp
+
+        kompas_stamp.Text(110).Str = staff_names[0][0]
+        kompas_stamp.Text(111).Str = staff_names[1][0]
+        kompas_stamp.Text(112).Str = staff_names[2][0]
+        kompas_stamp.Text(114).Str = staff_names[3][0]
+        kompas_stamp.Text(115).Str = staff_names[4][0]
+        kompas_stamp.Text(130).Str = staff_names[0][1]
+        kompas_stamp.Text(131).Str = staff_names[1][1]
+        kompas_stamp.Text(132).Str = staff_names[2][1]
+        kompas_stamp.Text(134).Str = staff_names[3][1]
+        kompas_stamp.Text(135).Str = staff_names[4][1]
+
+        kompas_stamp.Update()
+        kompas_document.Save()
+        kompas_document.Close(1)
+
+    def save_pdf(self, path: str):
+        kompas_document = self.application.Documents.Open(path, True, False) # IKompasDocument
+
+        drawing_folder_path = kompas_document.Path
+        drawing_name = os.path.splitext(os.path.basename(kompas_document.PathName))[0]
+        drawing_ext = os.path.splitext(os.path.basename(kompas_document.PathName))[1]
+
+        if drawing_ext == '.cdw':
+            ks_drawing = self.kompas_object.ActiveDocument2D()
+            ks_drawing.ksSaveDocument(drawing_folder_path + '\\' + drawing_name + '.pdf')
+
+        if drawing_ext == '.spw':
+            ks_specification = self.kompas_object.SpcActiveDocument()
+            ks_specification.ksSaveDocument(drawing_folder_path + '\\' + drawing_name + '.pdf')
+
+        kompas_document.Close(1)
+
 
 
 
