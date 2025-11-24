@@ -25,6 +25,7 @@ class MainApplication(tk.Tk):
         self.name_approve = None
         self.pdf_check = None
         self.btn_choose = None
+        self.lit = None
 
         self.title("Пакетное редактирование основной надписи")  # Заголовок окна
         # self.geometry("600x400")  # Размер окна (ширина x высота)
@@ -64,6 +65,9 @@ class MainApplication(tk.Tk):
         self.name_approve = InputStringWidget(self.main_frame, text="Утверждающий")
         self.name_approve.pack(fill='x')
 
+        self.lit = InputLitWidget(self.main_frame, text="Литера")
+        self.lit.pack(fill='x')
+
         self.pdf_check = CheckPdfWidget(self.main_frame)
         self.pdf_check.pack(fill='x')
 
@@ -76,7 +80,8 @@ class MainApplication(tk.Tk):
                        self.name_control.get_value(),
                        self.name_technologist.get_value(),
                        self.name_norm.get_value(),
-                       self.name_approve.get_value()]
+                       self.name_approve.get_value(),
+                       self.lit.get_value()]
         if len(self.selected_files) > 0:
             for item in self.selected_files:
                 self.kompas.change_document(item, staff_names)
@@ -122,6 +127,20 @@ class InputStringWidget(tk.Frame):
         return self.surname_input.get(), self.date_input.get()
 
 
+class InputLitWidget(tk.Frame):
+    def __init__(self, master, text):
+        super().__init__(master)
+
+        self.lit_label = tk.Label(self, text=text, anchor='w', width=20)
+        self.lit_label.pack(side=tk.LEFT, ipady=5)
+        self.lit_input = tk.Entry(self)
+        self.lit_input.pack(side=tk.LEFT, fill='x', expand=True, ipady=5)
+
+
+    def get_value(self):
+        return self.lit_input.get(), 0
+
+
 class CheckPdfWidget(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
@@ -165,6 +184,16 @@ class Kompas:
         kompas_stamp.Text(132).Str = staff_names[2][1]
         kompas_stamp.Text(134).Str = staff_names[3][1]
         kompas_stamp.Text(135).Str = staff_names[4][1]
+        if len(staff_names[5][0]) == 2:
+            txt_line = kompas_stamp.Text(40).TextLine(0)
+            txt_line.Clear()
+            letter_1 = txt_line.Add()
+            letter_1.Str = staff_names[5][0][0]
+            letter_2 = txt_line.Add()
+            letter_2.Str = staff_names[5][0][1]
+            letter_2.ItemType = 0x5
+        else:
+            kompas_stamp.Text(40).Str = staff_names[5][0]
 
         kompas_stamp.Update()
         kompas_document.Save()
